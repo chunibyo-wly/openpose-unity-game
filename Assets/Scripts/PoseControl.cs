@@ -1,17 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 public class PoseControl : MonoBehaviour
 {
     // ----------------------------------------------
     [Header("Option")]
     // ----------------------------------------------
+
+    // debug 用 cube 用的是 position 这个需要按比例缩小
     public float cubeGlobalScale = 0.001f;
 
+    // debug 用 cube与模型平移一小段距离
     public Vector3 cubeGlobalOffset = new Vector3(1.2f, 0, 0);
+
+    public bool debugMode = true;
 
     // ----------------------------------------------
     [Header("ReadOnly")]
@@ -20,7 +27,23 @@ public class PoseControl : MonoBehaviour
 
     public Transform[] cubeList;
 
+    /// <summary>
+    /// 内建变量
+    /// </summary>
+
+    // 关节的总数目
     private const int JointNumber = 17;
+
+    // 父亲关节
+    private readonly int[] parentJoints = {1, 2, 4, 5, 7, 8, 11, 12, 14, 15};
+
+    // 子关节
+    private readonly int[] childrenJoints = {2, 3, 5, 6, 8, 10, 12, 13, 15, 16};
+
+    private Quaternion[] initInv;
+
+    private Quaternion[] initRot;
+
 
     /// <summary>
     /// 假数据接口
@@ -41,14 +64,21 @@ public class PoseControl : MonoBehaviour
     {
         readInPose = ReadPosData("Assets\\Scripts\\pos_sample1.txt");
         AddBones();
-        AddCubes();
+        if (debugMode)
+            AddCubes();
+        InitRotation();
     }
 
     // Update is called once per frame
     void Update()
     {
         var pose = GetPose();
-        UpdateCubes(pose);
+        if (debugMode)
+        {
+            UpdateCubes(pose);
+            UpdateDebug();
+        }
+        UpdatePose(pose);
     }
 
     private static List<Vector3[]> ReadPosData(string filename)
@@ -130,6 +160,24 @@ public class PoseControl : MonoBehaviour
         }
     }
 
+    private void InitRotation()
+    {
+        initInv = new Quaternion[JointNumber];
+        initRot = new Quaternion[JointNumber];
+
+        var initForward = GetNormalVector(boneList[7].position, boneList[4].position, boneList[1].position);
+        initInv[0] = Quaternion.Inverse(Quaternion.LookRotation(initForward));
+        initRot[0] = boneList[0].rotation;
+        for (var i = 0; i < parentJoints.Length; i++)
+        {
+            var parentJoint = parentJoints[i];
+            var childrenJoint = childrenJoints[i];
+            initRot[parentJoint] = boneList[parentJoint].rotation;
+            initInv[parentJoint] =
+                Quaternion.Inverse(Quaternion.LookRotation(boneList[parentJoint].position - boneList[childrenJoint].position, initForward));
+        }
+    }
+
     private void UpdateCubes(IReadOnlyList<Vector3> pose)
     {
         for (var i = 0; i < JointNumber; i++)
@@ -137,6 +185,47 @@ public class PoseControl : MonoBehaviour
             // 这里的坐标是相对与父亲也就是 chan 的 root 而言的
             // 这个时候的 chan 的 root 和世界坐标的 root 是重合的
             cubeList[i].localPosition = pose[i] * cubeGlobalScale + cubeGlobalOffset;
+        }
+    }
+
+    private static Vector3 GetNormalVector(Vector3 a, Vector3 b, Vector3 c)
+    {
+        var d1 = a - b;
+        var d2 = a - c;
+        var dd = Vector3.Cross(d1, d2);
+        dd.Normalize();
+        return dd;
+    }
+
+    private void UpdateDebug()
+    {
+        for (int i = 0; i < JointNumber; i++)
+        {
+            if (boneList[i] == null)
+                continue;
+
+            // x 红色
+            Debug.DrawRay(boneList[i].position, boneList[i].right * 0.1f, Color.magenta);
+            // y 绿色
+            Debug.DrawRay(boneList[i].position, boneList[i].up * 0.1f, Color.green);
+            // z 蓝色
+            Debug.DrawRay(boneList[i].position, boneList[i].forward * 0.1f, Color.cyan);
+        }
+    }
+
+    private void UpdatePose(IReadOnlyList<Vector3> pose)
+    {
+        var posForward = GetNormalVector(pose[7], pose[4], pose[1]);
+        var rootRotation = transform.rotation;
+        boneList[0].rotation = rootRotation * Quaternion.LookRotation(posForward) * initInv[0] * initRot[0];
+        for (var i = 0; i < parentJoints.Length; i++)
+        {
+            var parentJoint = parentJoints[i];
+            var childrenJoint = childrenJoints[i];
+            boneList[parentJoint].rotation =
+                rootRotation * Quaternion.LookRotation(pose[parentJoint] - pose[childrenJoint], posForward) *
+                initInv[parentJoint] * initRot[parentJoint];
+            Debug.DrawLine(boneList[parentJoint].position, boneList[childrenJoint].position, Color.blue);
         }
     }
 }
