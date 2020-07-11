@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using UnityEngine;
+using static GetPose;
 using Debug = UnityEngine.Debug;
 
 public class PoseControl : MonoBehaviour
@@ -19,6 +20,12 @@ public class PoseControl : MonoBehaviour
     public Vector3 cubeGlobalOffset = new Vector3(1.2f, 0, 0);
 
     public bool debugMode = true;
+
+    public float frameRate = 30;
+
+    public string url = "http://localhost:5000/getPose";
+
+    public TakePhoto takePhoto;
 
     // ----------------------------------------------
     [Header("ReadOnly")]
@@ -44,25 +51,37 @@ public class PoseControl : MonoBehaviour
 
     private Quaternion[] initRot;
 
+    private float timer = 0;
 
-    /// <summary>
-    /// 假数据接口
-    /// </summary>
-    private List<Vector3[]> readInPose;
+    public WebCamTexture backCam;
 
-    [SerializeField] private int currentFrame = 0;
+    private Vector2[] pose2D;
 
-    private Vector3[] GetPose()
+    private Vector3[] pose3D;
+
+    private void SetPose(float[] inPose2D, float[] inPose3D)
     {
-        var pose = readInPose[currentFrame];
-        currentFrame += 1;
-        return pose;
+        for (int i = 0; i < pose3D.Length; ++i)
+        {
+            pose3D[i] = new Vector3(inPose3D[i * 3], -inPose3D[i * 3 + 1], -inPose3D[i * 3 + 2]);
+        }
+    }
+
+    private void GetPoseFunction()
+    {
+        var tex = new Texture2D(backCam.width, backCam.height);
+        tex.SetPixels(backCam.GetPixels());
+        tex.Apply();
+        var bytes = tex.EncodeToPNG();
+        Singleton.Upload(url, bytes, SetPose);
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        readInPose = ReadPosData("Assets\\Scripts\\pos_sample1.txt");
+        backCam = takePhoto.webCamTexture;
+        pose2D = new Vector2[JointNumber];
+        pose3D = new Vector3[JointNumber];
         AddBones();
         if (debugMode)
             AddCubes();
@@ -72,13 +91,23 @@ public class PoseControl : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        var pose = GetPose();
-        if (debugMode)
+        if (Input.GetKey("up"))
         {
-            UpdateCubes(pose);
-            UpdateDebug();
+            GetPoseFunction();
         }
-        UpdatePose(pose);
+
+        timer += Time.deltaTime;
+        if (timer > (1 / frameRate))
+        {
+            timer = 0;
+            if (debugMode)
+            {
+                UpdateCubes(pose3D);
+                UpdateDebug();
+            }
+
+            // UpdatePose(pose);
+        }
     }
 
     private static List<Vector3[]> ReadPosData(string filename)
@@ -174,7 +203,9 @@ public class PoseControl : MonoBehaviour
             var childrenJoint = childrenJoints[i];
             initRot[parentJoint] = boneList[parentJoint].rotation;
             initInv[parentJoint] =
-                Quaternion.Inverse(Quaternion.LookRotation(boneList[parentJoint].position - boneList[childrenJoint].position, initForward));
+                Quaternion.Inverse(
+                    Quaternion.LookRotation(boneList[parentJoint].position - boneList[childrenJoint].position,
+                        initForward));
         }
     }
 
