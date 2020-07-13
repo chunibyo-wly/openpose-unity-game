@@ -13,8 +13,8 @@ TagManager:
   - UI
   - 
   - 
-  - 
-  - 
+  - Rhythm
+  - Character
   - 
   - 
   - 
@@ -38,6 +38,12 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: Rhythm
+    uniqueID: 600573085
+    locked: 0
+  - name: Character
+    uniqueID: 1926401729
+    locked: 0
   - name: Default
     uniqueID: 0
     locked: 0
