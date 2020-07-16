@@ -45,7 +45,6 @@ public class GetPose
         };
         RestClient.Post<Pose>(requestHelper).Then(response =>
         {
-            Debug.Log(response.pose3D);
             setPose(response.pose2D, response.pose3D);
         });
     }

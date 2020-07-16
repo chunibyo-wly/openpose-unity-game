@@ -59,12 +59,34 @@ public class PoseControl : MonoBehaviour
 
     private Vector3[] pose3D;
 
+    private Vector3 HelpPose3D(int index, IReadOnlyList<float> inPose3D)
+    {
+        return new Vector3(inPose3D[index * 3], -inPose3D[index * 3 + 1], -inPose3D[index * 3 + 2]);
+    }
+
     private void SetPose(float[] inPose2D, float[] inPose3D)
     {
-        for (int i = 0; i < pose3D.Length; ++i)
-        {
-            pose3D[i] = new Vector3(inPose3D[i * 3], -inPose3D[i * 3 + 1], -inPose3D[i * 3 + 2]);
-        }
+        // for (int i = 0; i < pose3D.Length; ++i)
+        // {
+        //     pose3D[i] = new Vector3(inPose3D[i * 3], -inPose3D[i * 3 + 1], -inPose3D[i * 3 + 2]);
+        // }
+        pose3D[0] = HelpPose3D(2, inPose3D);
+        pose3D[1] = HelpPose3D(6, inPose3D);
+        pose3D[2] = HelpPose3D(7, inPose3D);
+        pose3D[3] = HelpPose3D(8, inPose3D);
+        pose3D[4] = HelpPose3D(12, inPose3D);
+        pose3D[5] = HelpPose3D(13, inPose3D);
+        pose3D[6] = HelpPose3D(14, inPose3D);
+        pose3D[8] = HelpPose3D(0, inPose3D);
+        pose3D[7] = (pose3D[0] + pose3D[8]) / 2;
+        // pose3D[9] = HelpPose3D(0, inPose3D);
+        pose3D[10] = HelpPose3D(1, inPose3D);
+        pose3D[11] = HelpPose3D(9, inPose3D);
+        pose3D[12] = HelpPose3D(10, inPose3D);
+        pose3D[13] = HelpPose3D(11, inPose3D);
+        pose3D[14] = HelpPose3D(3, inPose3D);
+        pose3D[15] = HelpPose3D(4, inPose3D);
+        pose3D[16] = HelpPose3D(5, inPose3D);
     }
 
     private void GetPoseFunction()
@@ -97,12 +119,13 @@ public class PoseControl : MonoBehaviour
             UpdateDebug();
         }
 
-        // UpdatePose(pose);
+        UpdatePose(pose3D);
         timer += Time.deltaTime;
+        // Todo 改成周期
         if (timer > (1 / frameRate))
         {
             timer = 0;
-            // GetPoseFunction();
+            GetPoseFunction();
         }
     }
 
