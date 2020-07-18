@@ -21,7 +21,7 @@ public class PoseControl : MonoBehaviour
 
     public bool debugMode = true;
 
-    public float frameRate = 30;
+    public float frameRate = 60;
 
     public string url = "http://localhost:5000/getPose";
 
@@ -119,13 +119,14 @@ public class PoseControl : MonoBehaviour
             UpdateDebug();
         }
 
-        UpdatePose(pose3D);
         timer += Time.deltaTime;
         // Todo 改成周期
         if (timer > (1 / frameRate))
         {
+            // Todo 携程
             timer = 0;
             GetPoseFunction();
+            UpdatePose(pose3D);
         }
     }
 

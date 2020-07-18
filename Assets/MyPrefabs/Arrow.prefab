@@ -95,7 +95,7 @@ MonoBehaviour:
   score: {fileID: 0}
   keyCode: 275
   isPressEnable: 0
-  speed: 0.5
+  speed: 1
 --- !u!58 &5683463157934996126
 CircleCollider2D:
   m_ObjectHideFlags: 0
