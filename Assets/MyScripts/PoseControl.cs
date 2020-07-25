@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using Unity.Collections;
 using UnityEngine;
 using static GetPose;
 using Debug = UnityEngine.Debug;
@@ -55,48 +56,13 @@ public class PoseControl : MonoBehaviour
 
     public WebCamTexture backCam;
 
-    private Vector2[] pose2D;
+    public Vector2[] pose2D;
 
     private Vector3[] pose3D;
 
-    private Vector3 HelpPose3D(int index, IReadOnlyList<float> inPose3D)
-    {
-        return new Vector3(inPose3D[index * 3], -inPose3D[index * 3 + 1], -inPose3D[index * 3 + 2]);
-    }
+    public static KeyCode leftHand;
 
-    private void SetPose(float[] inPose2D, float[] inPose3D)
-    {
-        // for (int i = 0; i < pose3D.Length; ++i)
-        // {
-        //     pose3D[i] = new Vector3(inPose3D[i * 3], -inPose3D[i * 3 + 1], -inPose3D[i * 3 + 2]);
-        // }
-        pose3D[0] = HelpPose3D(2, inPose3D);
-        pose3D[1] = HelpPose3D(6, inPose3D);
-        pose3D[2] = HelpPose3D(7, inPose3D);
-        pose3D[3] = HelpPose3D(8, inPose3D);
-        pose3D[4] = HelpPose3D(12, inPose3D);
-        pose3D[5] = HelpPose3D(13, inPose3D);
-        pose3D[6] = HelpPose3D(14, inPose3D);
-        pose3D[8] = HelpPose3D(0, inPose3D);
-        pose3D[7] = (pose3D[0] + pose3D[8]) / 2;
-        // pose3D[9] = HelpPose3D(0, inPose3D);
-        pose3D[10] = HelpPose3D(1, inPose3D);
-        pose3D[11] = HelpPose3D(9, inPose3D);
-        pose3D[12] = HelpPose3D(10, inPose3D);
-        pose3D[13] = HelpPose3D(11, inPose3D);
-        pose3D[14] = HelpPose3D(3, inPose3D);
-        pose3D[15] = HelpPose3D(4, inPose3D);
-        pose3D[16] = HelpPose3D(5, inPose3D);
-    }
-
-    private void GetPoseFunction()
-    {
-        var tex = new Texture2D(backCam.width, backCam.height);
-        tex.SetPixels(backCam.GetPixels());
-        tex.Apply();
-        var bytes = tex.EncodeToPNG();
-        Singleton.Upload(url, bytes, SetPose);
-    }
+    public static KeyCode rightHand;
 
     // Start is called before the first frame update
     void Start()
@@ -123,11 +89,100 @@ public class PoseControl : MonoBehaviour
         // Todo 改成周期
         if (timer > (1 / frameRate))
         {
-            // Todo 携程
+            // Todo 协程
             timer = 0;
             GetPoseFunction();
             UpdatePose(pose3D);
         }
+    }
+
+    private static Vector3 HelpPose3D(int index, IReadOnlyList<float> inPose3D)
+    {
+        return new Vector3(inPose3D[index * 3], -inPose3D[index * 3 + 1], -inPose3D[index * 3 + 2]);
+    }
+
+    private static Vector2 HelpPose2D(int index, IReadOnlyList<float> inPose2D)
+    {
+        if (inPose2D[index * 3 + 2] > 0)
+            return new Vector2(inPose2D[index * 3], inPose2D[index * 3 + 1]);
+        return new Vector2(0f, 0f);
+    }
+
+    private void SetPose(float[] inPose2D, float[] inPose3D)
+    {
+        pose3D[0] = HelpPose3D(2, inPose3D);
+        pose3D[1] = HelpPose3D(6, inPose3D);
+        pose3D[2] = HelpPose3D(7, inPose3D);
+        pose3D[3] = HelpPose3D(8, inPose3D);
+        pose3D[4] = HelpPose3D(12, inPose3D);
+        pose3D[5] = HelpPose3D(13, inPose3D);
+        pose3D[6] = HelpPose3D(14, inPose3D);
+        pose3D[8] = HelpPose3D(0, inPose3D);
+        pose3D[7] = (pose3D[0] + pose3D[8]) / 2;
+        // pose3D[9] = HelpPose3D(0, inPose3D);
+        pose3D[10] = HelpPose3D(1, inPose3D);
+        pose3D[11] = HelpPose3D(9, inPose3D);
+        pose3D[12] = HelpPose3D(10, inPose3D);
+        pose3D[13] = HelpPose3D(11, inPose3D);
+        pose3D[14] = HelpPose3D(3, inPose3D);
+        pose3D[15] = HelpPose3D(4, inPose3D);
+        pose3D[16] = HelpPose3D(5, inPose3D);
+
+        // 2D 坐标系, 左上角开始
+        // width 是x
+        // height 是y
+        for (int i = 0; i < inPose2D.Length; i++)
+        {
+            pose2D[i] = HelpPose2D(i, inPose2D);
+        }
+    }
+
+    // TODO 协程
+    private void GetPoseFunction()
+    {
+        var tex = new Texture2D(backCam.width, backCam.height);
+        tex.SetPixels(backCam.GetPixels());
+        tex.Apply();
+        var bytes = tex.EncodeToPNG();
+        Singleton.Upload(url, bytes, SetPose);
+    }
+
+    private KeyCode JudgeHandsStatus(Vector2 a, Vector2 b, double threshold)
+    {
+        // a 是末端节点
+        // b 是肩部
+
+        // 2D 坐标系, 左上角开始
+        // width 是x
+        // height 是y
+        float x = Math.Abs(a.x - b.x);
+        float y = Math.Abs(a.y - b.y);
+
+        // 上
+        if (a.y < b.y && Math.Atan(x / y) <= threshold)
+        {
+            return KeyCode.UpArrow;
+        }
+
+        // 下
+        if (a.y > b.y && Math.Atan(x / y) <= threshold)
+        {
+            return KeyCode.DownArrow;
+        }
+
+        // 右
+        if (a.x < b.x && Math.Atan(y / x) <= threshold)
+        {
+            return KeyCode.RightArrow;
+        }
+
+        // 左
+        if (a.x > b.x && Math.Atan(y / x) <= threshold)
+        {
+            return KeyCode.LeftArrow;
+        }
+
+        return 0;
     }
 
     private static List<Vector3[]> ReadPosData(string filename)
@@ -266,6 +321,12 @@ public class PoseControl : MonoBehaviour
 
     private void UpdatePose(IReadOnlyList<Vector3> pose)
     {
+        leftHand = JudgeHandsStatus(pose2D[5], pose2D[4], Math.PI / 6);
+        rightHand = JudgeHandsStatus(pose2D[11], pose2D[10], Math.PI / 6);
+        // if (rightHand == 1) rightHand = 3;
+        // else if (rightHand == 3) rightHand = 1;
+        Debug.Log(rightHand);
+
         var posForward = GetNormalVector(pose[7], pose[4], pose[1]);
         var rootRotation = transform.rotation;
         boneList[0].rotation = rootRotation * Quaternion.LookRotation(posForward) * initInv[0] * initRot[0];

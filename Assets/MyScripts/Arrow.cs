@@ -58,15 +58,23 @@ namespace MyScripts
             var step = speed * Time.deltaTime;
             transform.position += step * direction;
 
-            if (isPressEnable && Input.anyKey)
+            if (isPressEnable)
             {
-                if (Input.GetKey(keyCode))
+                if (Input.anyKey)
+                {
+                    if (Input.GetKey(keyCode))
+                    {
+                        HandleSuccessEvent();
+                    }
+                    else
+                    {
+                        HandleFailEvent();
+                    }
+                }
+
+                if (PoseControl.rightHand == keyCode || PoseControl.leftHand == keyCode)
                 {
                     HandleSuccessEvent();
-                }
-                else
-                {
-                    HandleFailEvent();
                 }
             }
         }
@@ -98,7 +106,7 @@ namespace MyScripts
 
         private void HandleSuccessEvent()
         {
-            Debug.Log("success");
+            // Debug.Log("success");
             isPressEnable = false;
             CreateEffect(perfectEffect);
 
@@ -115,7 +123,7 @@ namespace MyScripts
 
         private void HandleFailEvent()
         {
-            Debug.Log("fail");
+            // Debug.Log("fail");
             CreateEffect(missEffect);
             // 连击
             combo.GetComponent<Text>().text = "000";
