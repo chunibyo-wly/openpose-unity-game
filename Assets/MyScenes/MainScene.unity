@@ -1392,7 +1392,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cubeGlobalScale: 0.01
   cubeGlobalOffset: {x: 1.2, y: 1, z: 0}
-  debugMode: 1
+  debugMode: 0
   frameRate: 20
   url: http://localhost:5000/getPose
   takePhoto: {fileID: 963194229}

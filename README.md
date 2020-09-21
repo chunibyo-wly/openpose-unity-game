@@ -1,2 +1,1 @@
-﻿# 参考
-https://github.com/kenkra/Unity-3d-pose-baseline/tree/master/Assets/pose_unity
+﻿基于人体姿态的体感游戏
